@@ -1,0 +1,31 @@
+{
+  "name": "munchkinserver",
+  "version": "1.0.0",
+  "description": "backend server for munchkin game",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --coverage --verbose"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meanJerkTime/munchkinServer.git"
+  },
+  "keywords": [
+    "node"
+  ],
+  "author": "Joe, Diane, Brendon, Edgar.",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/meanJerkTime/munchkinServer/issues"
+  },
+  "homepage": "https://github.com/meanJerkTime/munchkinServer#readme",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "socket.io": "^2.3.0",
+    "socket.io-client": "^2.3.1"
+  },
+  "devDependencies": {
+    "jest": "^26.5.3"
+  }
+}
