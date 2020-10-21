@@ -2,16 +2,18 @@
 
 /** 3rd party dependencies */
 require('dotenv').config();
-
-const io = require('socket.io')(5000); // <-- Connected to whichever server is hosting events
+const PORT = process.env.PORT || 5000;
+const io = require('socket.io')(PORT); // <-- Connected to whichever server is hosting events
 
 
 const ioClient = require('socket.io-client');
-const socket = ioClient.connect('http://localhost:3000');
+// const socket = ioClient.connect('https://munchkin-401-server.herokuapp.com');
+const socket = ioClient.connect('https://munchkin-401-server.herokuapp.com');
 
-socket.on('serverHubConnect', () => {
-    console.log('server and hub connected');
-})
+socket.on('hubConnected', () => {
+  console.log('server and hub connected');
+});
+
 
 
 /** Primary game namespace */
