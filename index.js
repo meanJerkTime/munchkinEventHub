@@ -2,7 +2,7 @@
 
 require('dotenv').config();
 
-const server = require('./server.js');
+const server = require('./hub.js');
 const PORT = process.env.PORT || 3000;
 
 server.start(PORT);
