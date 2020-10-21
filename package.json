@@ -2,9 +2,10 @@
   "name": "munchkinserver",
   "version": "1.0.0",
   "description": "backend server for munchkin game",
-  "main": "hub.js",
+  "main": "index.js",
   "scripts": {
-    "test": "jest --coverage --verbose"
+    "test": "jest --coverage --verbose",
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
