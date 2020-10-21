@@ -3,7 +3,15 @@
 /** 3rd party dependencies */
 require('dotenv').config();
 
-const io = require('socket.io')(3000); // <-- Connected to whichever server is hosting events
+const io = require('socket.io')(5000); // <-- Connected to whichever server is hosting events
+
+
+const ioClient = require('socket.io-client');
+const socket = ioClient.connect('http://localhost:3000');
+
+socket.on('serverHubConnect', () => {
+    console.log('server and hub connected');
+})
 
 
 /** Primary game namespace */
@@ -15,7 +23,7 @@ io.engine.generateId = (req) => {
   return "User:" + custom_id + Math.floor(Math.random() * 10000);
 };
 
-io.on('connect', (socket) => {
+io.on('connection', (socket) => {
   
   socket.on('fromClient', () => {
     console.log(socket.id, 'Connected');
