@@ -1,11 +1,14 @@
 'use strict';
 require('dotenv').config();
 
+const PORT = process.env.PORT || 3000;
+
+const server = express()
+  .listen(PORT, () => console.log(`Listening on ${PORT}`));
 
 const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+
+const io = require('socket.io')(server);
 
 // connected to the server
 const ioClient = require('socket.io-client');
