@@ -1,18 +1,15 @@
 'use strict';
 require('dotenv').config();
 
-const PORT = process.env.PORT || 3000;
-
-const server = express()
-  .listen(PORT, () => console.log(`Listening on ${PORT}`));
-
 const express = require('express');
+const app = express();
+const http = require('http').createServer(app);
 
-const io = require('socket.io')(server);
+const io = require('socket.io')(http);
 
 // connected to the server
 const ioClient = require('socket.io-client');
-// const socket = ioClient.connect('https://munchkin-401-server.herokuapp.com');
+
 const socket = ioClient.connect('https://munchkin-401-server.herokuapp.com');
 
 socket.on('hubConnected', () => {
@@ -54,6 +51,13 @@ io.on('connection', (socket) => {
 });
  
 
+app.use(express.urlencoded({extended:true}));
 
+function start(port) {
+    http.listen(port, () => console.log('server up on port', port)); 
+}
 
+module.exports = {
+    start:start
+}
 
