@@ -2,7 +2,9 @@
 
 /** 3rd party dependencies */
 require('dotenv').config();
+
 const io = require('socket.io')(3000); // <-- Connected to whichever server is hosting events
+
 
 /** Primary game namespace */
 const gameRoom = io.of('/gameroom');
