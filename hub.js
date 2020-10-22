@@ -21,14 +21,22 @@ io.on('connection', (socket) => {
     console.log(socket.id, 'Connected');
       socket.emit('toClient');
   });
-  // on create room also joins the room
-  socket.on('createRoom', function(room) {
-    socket.join(room);
-    console.log(socket.id, 'joined Room', room);
-  });
-  // joins the room
-  socket.on('signUp', function(user) {
+
+  
+  socket.on('signIn', function(user) {
+    // superagent.post('http://localhost:3000/signin')
     superagent.post('https://munchkin-401-server.herokuapp.com/signup')
+      .send({username:user.userName, password:user.password})
+      .set('X-API-Key', 'foobar')
+      .set('accept', 'json')
+      .end((err, res) => {
+      });
+  });
+  
+
+  socket.on('signUp', function(user) {
+    superagent.post('http://localhost:3000/signup')
+    // superagent.post('https://munchkin-401-server.herokuapp.com/signup')
       .send({username:user.userName, password:user.password})
       .set('X-API-Key', 'foobar')
       .set('accept', 'json')
