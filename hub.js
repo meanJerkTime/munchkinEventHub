@@ -22,7 +22,7 @@ io.on('connection', (socket) => {
       socket.emit('toClient');
   });
 
-  
+
   socket.on('signIn', function(user) {
     // superagent.post('http://localhost:3000/signin')
     superagent.post('https://munchkin-401-server.herokuapp.com/signup')
@@ -30,13 +30,14 @@ io.on('connection', (socket) => {
       .set('X-API-Key', 'foobar')
       .set('accept', 'json')
       .end((err, res) => {
+        console.log(user);
       });
   });
   
 
   socket.on('signUp', function(user) {
-    superagent.post('http://localhost:3000/signup')
-    // superagent.post('https://munchkin-401-server.herokuapp.com/signup')
+    // superagent.post('http://localhost:3000/signup')
+    superagent.post('https://munchkin-401-server.herokuapp.com/signup')
       .send({username:user.userName, password:user.password})
       .set('X-API-Key', 'foobar')
       .set('accept', 'json')
