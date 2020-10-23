@@ -31,6 +31,7 @@ io.on('connection', (socket) => {
     .set('accept', 'json')
     .end((err, res) => {
       if(res.body.user == undefined) {
+        socket.emit('inValid');
         console.log(res.body.user);
       } else {
         console.log(res.body.user, 'signed in');
