@@ -5,43 +5,50 @@ require('dotenv').config();
 const io = require('socket.io')(3000); // Connected to whichever server is hosting events
 
 /** Primary game namespace */
-const gameRoom = io.of('/gameroom');
+// const gameRoom = io.of('/gameroom');
 
-/** Built-in method of socket.io engine to overwrite default socket ID and create a custom ID for all connected sockets */
-let custom_id = 0;
-io.engine.generateId = (req) => {
-  return "User:" + custom_id + Math.floor(Math.random() * 10000);
+/** Global connection to client that immediatley adds incoming sockets (clients) to their own game room. No namespace implementation is used. */
+io.on('connect', socket => {
+
+  socket.on('test', msg => {
+    console.log(msg);
+  });
+
+  socket.on('get-user-info', payload => {
+    console.log(`${payload.username} has connected to room ${payload.room}`);
+    socket.join(payload.room);
+    let rooms = Object.keys(io.sockets.adapter.rooms);
+    console.log('rooms', rooms);
+  });
+
+  // socket.on('create-new-room', room => {
+  //   socket.join('room1');
+  //   console.log(io.sockets.adapter.rooms);
+  //   // gameRoom.emit('room-list')
+  //   gameLog('create-new-room', room);
+  // });
+
+  // function getRooms() {
+  //   let allRooms = [];
+  //   let rooms = io.sockets.adapter.rooms;
+  //   allRooms.push(rooms);
+  //   return allRooms;
+  // };
+
+  // socket.on('get-player-username', answer => {
+  //   console.log(answer);
+  //   socket.id = answer;
+  //   console.log(io.sockets.adapter.rooms);
+  //   gameLog('get-player-username', socket.id)
+  //   socket.broadcast.emit('ready-player-1', `${socket.id} is ready to play!`);
+  // });
+
+});
+
+function gameLog(event, payload){
+  const timestamp = new Date().toTimeString().split(' ')[0];
+  console.log('TICK', { timestamp, event, payload } );
 };
-
-gameRoom.on('connect', (socket) => {
-  
-  socket.on('fromClient', () => {
-    console.log(socket.id, 'Connected');
-      socket.emit('toClient');
-  });
-  socket.on('answers', (payload) => {
-    // console.log(payload.roomsList);
-  });
-
-  // on create room also joins the room
-  socket.on('createRoom', function(room) {
-    socket.join(room);
-    console.log(socket.id, 'joined Room', room);
-  });
-  // joins the room
-  socket.on('joinRoom', function(room) {
-    socket.join(room);
-    console.log(socket.id, 'created Room', room);
-  });
-  console.log(socket.adapter.rooms);
-
-});
-
-gameRoom.on('connect', socket => {
-  
-  socket.emit('game-start')
-
-});
 
 
 
@@ -49,7 +56,7 @@ gameRoom.on('connect', socket => {
 
 BASIC TURN ORDER
 
-1. players joins a room
+1. players joins a game
 2. game starts
 3. players roll for turn order
 4. P1 kicks down door
