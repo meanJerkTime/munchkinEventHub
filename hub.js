@@ -24,16 +24,16 @@ io.on('connection', (socket) => {
 
 
   socket.on('signIn', function(user) {
-    // superagent.post('http://localhost:3000/signin')
-    superagent.post('https://munchkin-401-server.herokuapp.com/signup')
+    // superagent.get('http://localhost:3000/signin')
+    superagent.get('https://munchkin-401-server.herokuapp.com/signin')
     .send({username:user.userName, password:user.password})
     .set('X-API-Key', 'foobar')
     .set('accept', 'json')
-    .end((err, response) => {
-      if(response.body.user == undefined) {
-        console.log('Invalid Login');
+    .end((err, res) => {
+      if(res.body.user == undefined) {
+        console.log(res.body.user);
       } else {
-        console.log(response.body.user, 'signed in');
+        console.log(res.body.user, 'signed in');
       }
     });
 
@@ -50,7 +50,8 @@ io.on('connection', (socket) => {
       });
       console.log(user.userName, 'signed up');
 
-  }); 
+  });
+  
 });
  
 
