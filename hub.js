@@ -34,6 +34,7 @@ io.on('connection', (socket) => {
         console.log(res.body.user);
       } else {
         console.log(res.body.user, 'signed in');
+        socket.emit('signedIn');
       }
     });
 
