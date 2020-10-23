@@ -32,7 +32,7 @@ io.on('connection', (socket) => {
     .end((err, res) => {
       if(res.body.user == undefined) {
         socket.emit('inValid');
-        console.log(res.body.user);
+        console.log('Invalid Login');
       } else {
         console.log(res.body.user, 'signed in');
         socket.emit('valid');
