@@ -17,21 +17,26 @@ io.engine.generateId = (req) => {
 io.on('connection', (socket) => {
   
   
-  socket.on('fromClient', () => {
+  socket.on('fromPlayer', () => {
     console.log(socket.id, 'Connected');
-      socket.emit('toClient');
+      socket.emit('toPlayer');
   });
 
 
   socket.on('signIn', function(user) {
     // superagent.post('http://localhost:3000/signin')
     superagent.post('https://munchkin-401-server.herokuapp.com/signup')
-      .send({username:user.userName, password:user.password})
-      .set('X-API-Key', 'foobar')
-      .set('accept', 'json')
-      .end((err, res) => {
-        console.log(user);
-      });
+    .send({username:user.userName, password:user.password})
+    .set('X-API-Key', 'foobar')
+    .set('accept', 'json')
+    .end((err, response) => {
+      if(response.body.user == undefined) {
+        console.log('Invalid Login');
+      } else {
+        console.log(response.body.user, 'signed in');
+      }
+    });
+
   });
   
 
@@ -43,10 +48,9 @@ io.on('connection', (socket) => {
       .set('accept', 'json')
       .end((err, res) => {
       });
-    console.log(user);
+      console.log(user.userName, 'signed up');
 
-  });
-  
+  }); 
 });
  
 
