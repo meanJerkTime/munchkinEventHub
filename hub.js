@@ -4,53 +4,142 @@
 require('dotenv').config();
 const io = require('socket.io')(3000); // Connected to whichever server is hosting events
 
-/** Primary game namespace */
-// const gameRoom = io.of('/gameroom');
+/** Custom modules */
+const Player = require('./lib/player.js');
+const Monster = require('./lib/card-library/monster.js');
+const Treasure = require('./lib/card-library/treasure.js');
+const Curse = require('./lib/card-library/curse.js');
+const DoorMisc = require('./lib/card-library/door-misc.js');
 
-/** Global connection to client that immediatley adds incoming sockets (clients) to their own game room. No namespace implementation is used. */
+/** Primary game namespace */
+// const gameRoom = io.of('/gameroom'); // not currently in use
+
+/** Global connection to client that immediatley adds incoming sockets (clients) to their own game room. No namespace implementation is used. Might add namespace implementation in the future.*/
 io.on('connect', socket => {
 
-  socket.on('test', msg => {
-    console.log(msg);
-  });
+  // test connection
+  // socket.on('test', msg => {
+  //   console.log(msg);
+  // });
 
-  socket.on('get-user-info', payload => {
+  socket.on('create-room', payload => {
+
     console.log(`${payload.username} has connected to room ${payload.room}`);
+
+    gameLog('create-room', payload);
+    
     socket.join(payload.room);
-    let rooms = Object.keys(io.sockets.adapter.rooms);
-    console.log('rooms', rooms);
+
+    let p1 = new Player();
+
+    socket.emit('add-new-player', payload.username, p1);
+
+    openRooms('create-room');
+
   });
 
-  // socket.on('create-new-room', room => {
-  //   socket.join('room1');
-  //   console.log(io.sockets.adapter.rooms);
-  //   // gameRoom.emit('room-list')
-  //   gameLog('create-new-room', room);
-  // });
+  socket.on('join-room', () => {
+    
+    let rooms = Object.keys(io.sockets.adapter.rooms);
+    rooms.splice(0, io.engine.clientsCount);
+    console.log('room list', rooms);
+    socket.emit('get-room-list', rooms);
 
-  // function getRooms() {
-  //   let allRooms = [];
-  //   let rooms = io.sockets.adapter.rooms;
-  //   allRooms.push(rooms);
-  //   return allRooms;
-  // };
+    gameLog('join-room', 'no payload');
 
-  // socket.on('get-player-username', answer => {
-  //   console.log(answer);
-  //   socket.id = answer;
-  //   console.log(io.sockets.adapter.rooms);
-  //   gameLog('get-player-username', socket.id)
-  //   socket.broadcast.emit('ready-player-1', `${socket.id} is ready to play!`);
-  // });
+    openRooms('join-room');
+
+  });
+
+  socket.on('has-joined-room', payload => {
+
+    console.log(`${payload.username} has connected to room ${payload.joinedRoom}`);
+    socket.broadcast.emit('new-player-joins-room', `${payload.username} has connected to room ${payload.joinedRoom}`);
+
+    gameLog('has-joined-room', payload);
+   
+    socket.join(payload.joinedRoom);
+
+    let p1 = new Player();
+    socket.emit('add-new-player', payload.username, p1);
+
+    openRooms('has-joined-room');
+
+  });
+
+  socket.on('new-munchkin', (payload) => {
+
+    gameLog('new-munchkin', payload);
+
+    // randomly pull 4 door cards and 4 treasure cards and add them to palyer hand
+    // if player.dead = true
+      // only deal 2 door cards and 2 treasure cards
+    let d1 = new Monster(1, 'scary monster', 1, 1);
+    let d2 = new Monster(1, 'big monster', 1, 1);
+    let d3 = new Monster(1, 'small monster', 1, 1);
+    let d4 = new Monster(1, 'mad monster', 1, 1);
+    let t1 = new Treasure('loot', 2, 'helm');
+    let t2 = new Treasure('loot', 3, 'armor');
+    let t3 = new Treasure('loot', 1, 'boots');
+    let t4 = new Treasure('loot', 4, 'sword');
+
+    // initial 8 cards a player is dealt at start of game
+    let initialDeal = [
+      d1,
+      d2,
+      d3,
+      d4,
+      t1,
+      t2,
+      t3,
+      t4,
+    ];
+
+    payload.player.hand = initialDeal;
+    
+    socket.emit('play-hand', payload);
+
+    openRooms('new-munchkin');
+
+  });
+
+  socket.on('hand-has-been-played', payload => {
+
+    gameLog('hand-has-been-played', payload);
+
+    // pull one card from door deck at random
+    let card = new Monster(1, 'Weak Monster', 1, 1);
+
+    socket.emit('kick-down-door', payload, card);
+
+  });
+
+  socket.on('combat-ended', (payload, card) => {
+
+    gameLog('combat-ended', payload, card);
+
+    // pull (n) number of cards from treasure deck where (n) is card.treasures
+    let treasure = new Treasure('consumable', 3, 'power potion')
+    payload.player.hand.push(treasure);
+    console.log(payload.player.hand);
+
+    openRooms('combat-ended')
+
+  })
+
+  openRooms('global')
 
 });
 
-function gameLog(event, payload){
+function gameLog(event, payload, other){
   const timestamp = new Date().toTimeString().split(' ')[0];
-  console.log('TICK', { timestamp, event, payload } );
+  console.log('TICK', { timestamp, event, payload, other } );
 };
 
-
+function openRooms(event){
+  let rooms = io.sockets.adapter.rooms
+  console.log('OPEN ROOMS', {event, rooms});
+}
 
 /* 
 
@@ -85,6 +174,132 @@ BASIC TURN ORDER
 10. Repeat from step 1
 
 */
+
+/** temp card laibrary */
+// let door = doorCards[Math.floor(Math.random() * doorCards.length)]; // get random card
+
+let doorCards = [
+  {
+    name: 'Large Angry Chicken',
+    type: 'monster',
+    description: 'Fried chicken is delicious. Gain an EXTRA level if you defeat it with fire or flame.',
+    badStuff: 'Very painful pecking. Lose a level.',
+    treasures: 1,
+    monsterLevel: 2,
+    bonusLevel: null,
+    winLevel: 1,
+    loseLevel: 1,
+    monsterBonus: null,
+  },
+  {
+    name: 'Cleric',
+    type: 'playerClass',
+    description: 'When its time for you to draw cards face-up, you may draw from the appropriate discard pile. You must then discard one card from your hand for each card so drawn. You may discard up to 3 cards in combat against an Undead creature. Each card gives you +3 bonus points.',
+    badStuff: null,
+    treasures: null,
+    monsterLevel: null,
+    bonusLevel: null,
+    winLevel: null,
+    loseLevel: null,
+    monsterBonus: null,
+  },
+  {
+    name: 'Warrior',
+    type: 'playerClass',
+    description: 'You may discard up to 3 cards in combat, each one gives you a +1 bonus. You win ties in combat.',
+    badStuff: null,
+    treasures: null,
+    monsterLevel: null,
+    bonusLevel: null,
+    winLevel: null,
+    loseLevel: null,
+    monsterBonus: null,
+  },
+  {
+    name: 'Elf',
+    type: 'playerClass',
+    description: '+1 to run away. You go up a level for every monster you help someone else kill.',
+    badStuff: null,
+    treasures: null,
+    monsterLevel: null,
+    bonusLevel: null,
+    winLevel: null,
+    loseLevel: null,
+    monsterBonus: null,
+  },
+  {
+    name: 'Curse! Lose 1 small item.',
+    type: 'curse',
+    description: 'Choose 1 small item to discard. Any item that is not designated Big is small.',
+    badStuff: 'Lose 1 small item.',
+    treasures: null,
+    monsterLevel: null,
+    bonusLevel: null,
+    winLevel: null,
+    loseLevel: null,
+    monsterBonus: null,
+  },
+  {
+    name: 'Dwarf',
+    type: 'playerClass',
+    description: 'You can carry any number of Big items. You can have 6 cards in your hand.',
+    badStuff: null,
+    treasures: null,
+    monsterLevel: null,
+    bonusLevel: null,
+    winLevel: null,
+    loseLevel: null,
+    monsterBonus: null,
+  },
+  {
+    name: 'Curse! Lose 2 cards',
+    type: 'curse', 
+    description: 'Discard 2 cards.',
+    badStuff: 'Lose 2 cards.',
+    treasures: null,
+    monsterLevel: null,
+    bonusLevel: null,
+    winLevel: null,
+    loseLevel: null,
+    monsterBonus: null,
+  },
+  {
+    name: 'Plutonium Dragon',
+    type: 'monster',
+    description: 'Will not pursue anyone of level 5 or below.',
+    badStuff: 'You are roasted and eaten. You are dead.',
+    treasures: 5,
+    monsterLevel: 20,
+    bonusLevel: null,
+    winLevel: 1,
+    loseLevel: 'playerLevel',
+    monsterBonus: null,
+  },
+  {
+    name: 'Stoned Golem',
+    type: 'monster',
+    description: 'You may choose whether to fight the Stoned Golem or just wave, walk past him, and let him keep his treasure. Halflings must fight.',
+    badStuff: 'He has the munchies. He eats you. Youre dead.',
+    treasures: 4,
+    monsterLevel: 14,
+    bonusLevel: null,
+    winLevel: 1,
+    loseLevel: 'playerLevel',
+    monsterBonus: null,
+  },
+  {
+    name: 'Shrieking Geek',
+    type: 'monster',
+    description: '+6 against warriors.',
+    badStuff: 'You become a normal, boring Human. Discard any race or class cards in play.',
+    treasures: 2,
+    monsterLevel: 6,
+    bonusLevel: null,
+    winLevel: 1,
+    loseLevel: null,
+    monsterBonus: 6,
+  },
+];
  
 
 
