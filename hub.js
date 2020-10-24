@@ -166,17 +166,6 @@ io.on('connection', (socket) => {
   openRooms('global')
 
 });
-
- 
-
-
-
-
-  // test connection
-  // socket.on('test', msg => {
-  //   console.log(msg);
-  // });
-
   
 function gameLog(event, payload, other){
   const timestamp = new Date().toTimeString().split(' ')[0];
