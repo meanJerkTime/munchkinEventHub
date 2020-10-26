@@ -99,14 +99,6 @@ io.on('connection', (socket) => {
 
 })
 
-
-
-  // test connection
-  // socket.on('test', msg => {
-  //   console.log(msg);
-  // });
-
-  
 function gameLog(event, payload, other){
 //   const timestamp = new Date().toTimeString().split(' ')[0];
 //   console.log('TICK', { timestamp, event, payload, other } );
