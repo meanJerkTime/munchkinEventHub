@@ -17,30 +17,39 @@ const { response } = require('express');
 
 app.use(express.urlencoded({extended:true}));
 
-let players = [];
+let players = []; 
+let playerNum = 1;
+let turn = 0;
 
 io.on('connection', (socket) => {
   console.log(socket.id, 'Connected');
 
   players.push(socket.id);
   
-  if(players.length === 1) {
-    const player1 = socket.id;
-    io.emit('playerOne');
-  }
-  if(players.length === 2) {
-    const player2 = socket.id;
-    console.log(socket.id, 'is playerB')
-    // io.emit('isPlayerB', 'you are player B');
-    io.to(player2).emit('player2');
-  }
+  console.log(players, 'connected');
+      const player = socket.id;
+      io.to(player).emit('player', `player${playerNum}`);
+
+      console.log(socket.id, 'is player', playerNum++);
+      if(players.length === 1) {
+          io.to(player).emit('playerTurn');
+      }
+
+  socket.on('nextPlayer', () => {
+      turn++;
+      if(turn === players.length) {
+          turn = 0;
+      }
+      console.log(players[turn]);
+      console.log(turn);
+      io.to(players[turn]).emit('playerTurn');
+  })    
 
   socket.on('disconnect', () => {
     console.log('player', socket.id, 'disconnected');
     players = players.filter(player => player !== socket.id);
     console.log(players);
   })
-  console.log(players);
 
   
   socket.on('fromPlayer', () => {
@@ -48,24 +57,9 @@ io.on('connection', (socket) => {
       socket.emit('toPlayer');
   });
 
-  // function signIn(user) {
-  //   superagent.get('https://munchkin-401-server.herokuapp.com/signin')
-  //   .send({username:user.userName, password:user.password})
-  //   .set('X-API-Key', 'foobar')
-  //   .set('accept', 'json')
-  //   .end((err, res) => {
-  //     if(res.body.user == undefined) {
-  //       socket.emit('inValid');
-  //       console.log('Invalid Login');
-  //     } else {
-  //       console.log(res.body.user, 'signed in');
-  //       socket.emit('valid');
-  //     }
-  //   });
-  // }
-  // socket.on('signIn', signIn, (request, response) => {
-  //   console.log(response, request);
-  // } );
+
+
+
 
   // server sign up and sign in events
   socket.on('signIn', function(user) {
@@ -99,119 +93,11 @@ io.on('connection', (socket) => {
 
   });
 
-  // room and game loop events
 
-  socket.on('create-room', payload => {
 
-    console.log(`${payload.username} has connected to room ${payload.room}`);
 
-    gameLog('create-room', payload);
-    
-    socket.join(payload.room);
 
-    let p1 = new Player();
-
-    socket.emit('add-new-player', payload.username, p1);
-
-    openRooms('create-room');
-
-  });
-
-  socket.on('join-room', () => {
-    
-    let rooms = Object.keys(io.sockets.adapter.rooms);
-    rooms.splice(0, io.engine.clientsCount);
-    console.log('room list', rooms);
-    socket.emit('get-room-list', rooms);
-
-    gameLog('join-room', 'no payload');
-
-    openRooms('join-room');
-
-  });
-
-  socket.on('has-joined-room', payload => {
-
-    console.log(`${payload.username} has connected to room ${payload.joinedRoom}`);
-    socket.broadcast.emit('new-player-joins-room', `${payload.username} has connected to room ${payload.joinedRoom}`);
-
-    gameLog('has-joined-room', payload);
-   
-    socket.join(payload.joinedRoom);
-
-    let p1 = new Player();
-    socket.emit('add-new-player', payload.username, p1);
-
-    openRooms('has-joined-room');
-
-  });
-
-  socket.on('new-munchkin', (payload) => {
-
-    gameLog('new-munchkin', payload);
-
-    // randomly pull 4 door cards and 4 treasure cards and add them to palyer hand
-    // if player.dead = true
-      // only deal 2 door cards and 2 treasure cards
-    let d1 = new Monster(1, 'scary monster', 1, 1);
-    let d2 = new Monster(1, 'big monster', 1, 1);
-    let d3 = new Monster(1, 'small monster', 1, 1);
-    let d4 = new Monster(1, 'mad monster', 1, 1);
-    let t1 = new Treasure('loot', 2, 'helm');
-    let t2 = new Treasure('loot', 3, 'armor');
-    let t3 = new Treasure('loot', 1, 'boots');
-    let t4 = new Treasure('loot', 4, 'sword');
-
-    // initial 8 cards a player is dealt at start of game
-    let initialDeal = [
-      d1,
-      d2,
-      d3,
-      d4,
-      t1,
-      t2,
-      t3,
-      t4,
-    ];
-
-    payload.player.hand = initialDeal;
-    
-    socket.emit('play-hand', payload);
-
-    openRooms('new-munchkin');
-
-  });
-
-  socket.on('hand-has-been-played', payload => {
-
-    gameLog('hand-has-been-played', payload);
-
-    // pull one card from door deck at random
-    let card = new Monster(1, 'Weak Monster', 1, 1);
-
-    socket.emit('kick-down-door', payload, card);
-
-  });
-
-  socket.on('combat-ended', (payload, card) => {
-
-    gameLog('combat-ended', payload, card);
-
-    // pull (n) number of cards from treasure deck where (n) is card.treasures
-    let treasure = new Treasure('consumable', 3, 'power potion')
-    payload.player.hand.push(treasure);
-    console.log(payload.player.hand);
-
-    openRooms('combat-ended')
-
-  })
-
-  openRooms('global')
-
-});
-
- 
-
+})
 
 
 
@@ -222,48 +108,16 @@ io.on('connection', (socket) => {
 
   
 function gameLog(event, payload, other){
-  const timestamp = new Date().toTimeString().split(' ')[0];
-  console.log('TICK', { timestamp, event, payload, other } );
+//   const timestamp = new Date().toTimeString().split(' ')[0];
+//   console.log('TICK', { timestamp, event, payload, other } );
 };
 
 function openRooms(event){
   let rooms = io.sockets.adapter.rooms
-  // console.log('OPEN ROOMS', {event, rooms});
+//   console.log('ROOMS:', {event, rooms});
+    // console.log(io.sockets.adapter.rooms);
 }
 
-/* 
-BASIC TURN ORDER
-1. players joins a game
-2. game starts
-3. players roll for turn order
-4. P1 kicks down door
-5. Is it a monster? 
-  i. combat starts
-  ii. if P1 can beat monster:
-    a. P1 level++
-    b. P1 recieves treasure
-    c. P1 can play any applicable cards
-  iii. if P1 can't beat monster
-    a. ask for help (stretch goal)
-    b. roll d6 to run away
-      1. if roll succeeds, P1 turn is over
-      2. if roll fails, P1 loses combat
-      3. resolve any bad stuff
-6. Is it a curse?
-  i. curse effect applies to P1 immediately
-  ii. P1 can look for trouble or loot the room (see below)
-7. Is it neither?
-  i. P1 can look for trouble
-    a. play monster from your hand, standard combat rules apply
-  ii. P1 can loot the room
-    a. face down door card goes into P1s hand
-8. P1 plays any applicable cards i.e. equipment, curses against other players etc
-9. P1 turn is over, P2 turn start
-10. Repeat from step 1
-*/
-
-/** temp card laibrary */
-// let door = doorCards[Math.floor(Math.random() * doorCards.length)]; // get random card
 
 let doorCards = [
   {
