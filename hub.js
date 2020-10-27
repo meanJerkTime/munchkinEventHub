@@ -13,7 +13,7 @@ const DoorMisc = require('./lib/card-library/door-misc.js');
 
 /** Primary game namespace */
 // const gameRoom = io.of('/gameroom'); // not currently in use
-
+let players = [];
 /** Global connection to client that immediatley adds incoming sockets (clients) to their own game room. No namespace implementation is used. Might add namespace implementation in the future.*/
 io.on('connect', socket => {
 
@@ -21,6 +21,12 @@ io.on('connect', socket => {
   // socket.on('test', msg => {
   //   console.log(msg);
   // });
+
+  // socket.nickname = payload.username;
+  // players.push(socket.nickname)
+  // console.log(players);
+  // console.log(io.sockets.adapter.rooms);
+  // paylaod.nickname = socket.nickname
 
   socket.on('create-room', payload => {
 
@@ -30,19 +36,66 @@ io.on('connect', socket => {
     
     socket.join(payload.room);
 
-    let p1 = new Player();
+    let player = new Player();
+    
+    let roomData = {
+      roomID: payload.room,
+      userID: socket.id,
+    };
+    
+    let playerData = {
+      create: payload.create,
+      roomData,
+      username: payload.username,
+      player, 
+    };
 
-    socket.emit('add-new-player', payload.username, p1);
+    players.push(playerData);
+    // console.log(playerData);
+    socket.emit('add-new-player', playerData);
 
     openRooms('create-room');
 
   });
 
+  // socket.on('create-or-join', payload => {
+
+  //   let players = [];
+
+  //   console.log(`${payload.username} created and joined the room ${payload.room}`);
+
+  //   gameLog('create-or-join', payload);
+
+  //   socket.join(payload.room);
+
+    // let roomData = {
+    //   roomID: payload.room,
+    //   userID: socket.id,
+    // };
+
+    // players.push(roomData);
+
+    // let playerData = {
+    //   playerList: players,
+    //   roomData,
+    //   username: payload.username,
+    //   player: new Player(),
+    // };
+
+  //   // check to see if client is connect to the room. 
+  //   if ( io.sockets.adapter.sids[socket.id][payload.room] ) {
+  //     socket.emit('add-new-player', playerData);
+  //   };
+
+  //   openRooms('create-or-join');
+
+  // });
+
   socket.on('join-room', () => {
-    
+
     let rooms = Object.keys(io.sockets.adapter.rooms);
-    rooms.splice(0, io.engine.clientsCount);
     console.log('room list', rooms);
+    rooms.splice(0, io.engine.clientsCount);
     socket.emit('get-room-list', rooms);
 
     gameLog('join-room', 'no payload');
@@ -58,10 +111,21 @@ io.on('connect', socket => {
 
     gameLog('has-joined-room', payload);
    
-    socket.join(payload.joinedRoom);
+    socket.join(payload.room);
 
-    let p1 = new Player();
-    socket.emit('add-new-player', payload.username, p1);
+    let roomData = {
+      roomID: payload.room,
+      userID: socket.id,
+    };
+
+    let playerData = {
+      roomData,
+      username: payload.username,
+      player: new Player(),
+    };
+
+    players.push(playerData);
+    socket.emit('add-new-player', playerData);
 
     openRooms('has-joined-room');
 
@@ -97,7 +161,12 @@ io.on('connect', socket => {
 
     payload.player.hand = initialDeal;
     
-    socket.emit('play-hand', payload);
+    socket.emit('add-to-queue', payload);
+    if (payload.create) {
+      socket.emit('play-hand', payload);
+    } else {
+      socket.emit('not-your-turn', payload);
+    };
 
     openRooms('new-munchkin');
 
@@ -119,15 +188,32 @@ io.on('connect', socket => {
     gameLog('combat-ended', payload, card);
 
     // pull (n) number of cards from treasure deck where (n) is card.treasures
-    let treasure = new Treasure('consumable', 3, 'power potion')
-    payload.player.hand.push(treasure);
+    // let treasure = new Treasure('consumable', 3, 'power potion')
+    payload.player.hand.push(new Treasure('consumable', 3, 'power potion'));
     console.log(payload.player.hand);
 
-    openRooms('combat-ended')
+    openRooms('combat-ended');
 
-  })
+  });
 
-  openRooms('global')
+  socket.on('turn-over', (payload) => {
+
+    socket.emit('not-your-turn', payload);
+    console.log(players);
+
+    if (players.length > 0) {
+      let nextPlayer = players.shift();
+      players.push(nextPlayer);
+      if (players.length > 1) {
+        socket.to(nextPlayer.roomData.userID).emit('play-hand', nextPlayer);
+      } else {
+        socket.emit('play-hand', payload);
+      };
+    };
+
+  });
+
+  openRooms('global');
 
 });
 
@@ -139,7 +225,7 @@ function gameLog(event, payload, other){
 function openRooms(event){
   let rooms = io.sockets.adapter.rooms
   console.log('OPEN ROOMS', {event, rooms});
-}
+};
 
 /* 
 
