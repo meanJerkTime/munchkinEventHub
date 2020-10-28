@@ -8,6 +8,8 @@ const Monster = require('./lib/card-library/monster.js');
 const Treasure = require('./lib/card-library/treasure.js');
 const Curse = require('./lib/card-library/curse.js');
 const DoorMisc = require('./lib/card-library/door-misc.js');
+const { request } = require('http');
+const { response } = require('express');
 
 /** Primary game namespace */
 // const gameRoom = io.of('/gameroom'); // not currently in use
@@ -15,18 +17,39 @@ let players = [];
 let playerNum = 1;
 let turn = 0;
 /** Global connection to client that immediatley adds incoming sockets (clients) to their own game room. No namespace implementation is used. Might add namespace implementation in the future.*/
-io.on('connect', socket => {
 
-  // test connection
-  // socket.on('test', msg => {
-  //   console.log(msg);
-  // });
+io.on('connection', (socket) => {
+  console.log(socket.id, 'Connected');
 
-  // socket.nickname = payload.username;
-  // players.push(socket.nickname)
-  // console.log(players);
-  // console.log(io.sockets.adapter.rooms);
-  // paylaod.nickname = socket.nickname
+  players.push(socket.id);
+
+  socket.on('disconnect', () => {
+    console.log('player', socket.id, 'disconnected');
+    players = players.filter(player => player !== socket.id);
+    console.log(players);
+  })
+  console.log(players);
+
+  
+  socket.on('fromPlayer', () => {
+    console.log(socket.id, 'Connected');
+      socket.emit('toPlayer');
+  });
+  // server sign up and sign in events
+  socket.on('signIn', function(user) {
+    // superagent.get('http://localhost:3000/signin')
+    superagent.get('https://munchkin-401-server.herokuapp.com/signin')
+    .send({username:user.userName, password:user.password})
+    .set('X-API-Key', 'foobar')
+    .set('accept', 'json')
+    .end((err, res) => {
+      if(res.body.user == undefined) {
+        socket.emit('inValid');
+        console.log('Invalid Login');
+      } else {
+        console.log(res.body.user, 'signed in');
+        socket.emit('valid');
+      }
 
   socket.on('create-room', payload => {
 
@@ -63,6 +86,7 @@ io.on('connect', socket => {
         turn = 0;
       };
       io.to(players[turn]).emit('player-turn');
+
     });
 
     players.push(playerData);
@@ -240,45 +264,9 @@ function gameLog(event, payload, other){
 
 function openRooms(event){
   let rooms = io.sockets.adapter.rooms
+}
   console.log('OPEN ROOMS', {event, rooms});
-};
 
-/* 
-
-BASIC TURN ORDER
-
-1. players joins a game
-2. game starts
-3. players roll for turn order
-4. P1 kicks down door
-5. Is it a monster? 
-  i. combat starts
-  ii. if P1 can beat monster:
-    a. P1 level++
-    b. P1 recieves treasure
-    c. P1 can play any applicable cards
-  iii. if P1 can't beat monster
-    a. ask for help (stretch goal)
-    b. roll d6 to run away
-      1. if roll succeeds, P1 turn is over
-      2. if roll fails, P1 loses combat
-      3. resolve any bad stuff
-6. Is it a curse?
-  i. curse effect applies to P1 immediately
-  ii. P1 can look for trouble or loot the room (see below)
-7. Is it neither?
-  i. P1 can look for trouble
-    a. play monster from your hand, standard combat rules apply
-  ii. P1 can loot the room
-    a. face down door card goes into P1s hand
-8. P1 plays any applicable cards i.e. equipment, curses against other players etc
-9. P1 turn is over, P2 turn start
-10. Repeat from step 1
-
-*/
-
-/** temp card laibrary */
-// let door = doorCards[Math.floor(Math.random() * doorCards.length)]; // get random card
 
 let doorCards = [
   {
