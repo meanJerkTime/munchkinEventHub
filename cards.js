@@ -148,7 +148,7 @@ let doorCards = [
     type: 'monster',
     description: 'You may choose whether to fight the Stoned Golem or just wave, walk past him, and let him keep his treasure. Halflings must fight.',
     badStuff: 'He has the munchies. He eats you. Youre dead.',
-    level: +1,
+    level: +5,
     armour: +2,
     weapon: +3
   },
@@ -193,7 +193,7 @@ let doorCards = [
     type: 'monster',
     description: 'You may choose whether to fight the Stoned Golem or just wave, walk past him, and let him keep his treasure. Halflings must fight.',
     badStuff: 'He has the munchies. He eats you. Youre dead.',
-    level: +1,
+    level: +5,
     armour: +1,
     weapon: +3
   },
