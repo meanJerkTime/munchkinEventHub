@@ -22,11 +22,11 @@ let players = [];
 
 io.on('connection', (socket) => {
   console.log(socket.id, 'Connected');
-
-     socket.on('fromPlayer', () => {
-        console.log(socket.id, 'Connected');
-        socket.emit('toPlayer');
-  });
+    socket.emit('login');
+  //    socket.on('fromPlayer', () => {
+  //       console.log(socket.id, 'Connected');
+  //       socket.emit('toPlayer');
+  // });
 
      players.push(socket.id);
   
@@ -34,7 +34,11 @@ io.on('connection', (socket) => {
     
       console.log(socket.id, 'is player', playerNum++);
       if(players.length === 1) {
-          io.to(player).emit('playerTurn', );
+          // io.to(player).emit('playerTurn');
+          socket.on('game', () => {
+            io.to(player).emit('playerTurn');
+          })
+
       }
       else if (players.length !== 1) {
         io.to(player).emit('player', 'Please wait to play your hand!');
