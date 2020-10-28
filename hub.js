@@ -1,12 +1,8 @@
 'use strict';
 require('dotenv').config();
+const io = require('socket.io')(3000); // Connected to whichever server is hosting events
 
-const superagent = require('superagent');
-
-const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+/** Custom modules */
 const Player = require('./lib/player.js');
 const Monster = require('./lib/card-library/monster.js');
 const Treasure = require('./lib/card-library/treasure.js');
@@ -15,9 +11,12 @@ const DoorMisc = require('./lib/card-library/door-misc.js');
 const { request } = require('http');
 const { response } = require('express');
 
-app.use(express.urlencoded({extended:true}));
-
+/** Primary game namespace */
+// const gameRoom = io.of('/gameroom'); // not currently in use
 let players = [];
+let playerNum = 1;
+let turn = 0;
+/** Global connection to client that immediatley adds incoming sockets (clients) to their own game room. No namespace implementation is used. Might add namespace implementation in the future.*/
 
 io.on('connection', (socket) => {
   console.log(socket.id, 'Connected');
@@ -51,24 +50,6 @@ io.on('connection', (socket) => {
         console.log(res.body.user, 'signed in');
         socket.emit('valid');
       }
-    });
-
-  });
-  
-
-  socket.on('signUp', function(user) {
-    // superagent.post('http://localhost:3000/signup')
-    superagent.post('https://munchkin-401-server.herokuapp.com/signup')
-      .send({username:user.userName, password:user.password})
-      .set('X-API-Key', 'foobar')
-      .set('accept', 'json')
-      .end((err, res) => {
-      });
-      console.log(user.userName, 'signed up');
-
-  });
-
-  // room and game loop events
 
   socket.on('create-room', payload => {
 
@@ -76,21 +57,84 @@ io.on('connection', (socket) => {
 
     gameLog('create-room', payload);
     
-    socket.join(payload.room);
+    // socket.join(payload.room); // will be implemented in the future
 
-    let p1 = new Player();
+    let player = new Player();
+    
+    let roomData = {
+      roomID: payload.room,
+      userID: socket.id,
+    };
+    
+    let playerData = {
+      create: payload.create,
+      roomData,
+      username: payload.username,
+      player, 
+    };
 
-    socket.emit('add-new-player', payload.username, p1);
+    const user = socket.id;
+    if( players.length === 1 ) {
+      io.to(user).emit('player-turn');
+    } else if ( players.length !== 1 ) {
+      io.to(user).emit('player', 'please wait to play your turn', payload);
+    };
+
+    socket.on('next-player', () => {
+      turn++;
+      if ( turn === players.length ) {
+        turn = 0;
+      };
+      io.to(players[turn]).emit('player-turn');
+
+    });
+
+    players.push(playerData);
+    // console.log(playerData);
+    socket.emit('add-new-player', playerData);
 
     openRooms('create-room');
 
   });
 
+  // socket.on('create-or-join', payload => {
+
+  //   let players = [];
+
+  //   console.log(`${payload.username} created and joined the room ${payload.room}`);
+
+  //   gameLog('create-or-join', payload);
+
+  //   socket.join(payload.room);
+
+    // let roomData = {
+    //   roomID: payload.room,
+    //   userID: socket.id,
+    // };
+
+    // players.push(roomData);
+
+    // let playerData = {
+    //   playerList: players,
+    //   roomData,
+    //   username: payload.username,
+    //   player: new Player(),
+    // };
+
+  //   // check to see if client is connect to the room. 
+  //   if ( io.sockets.adapter.sids[socket.id][payload.room] ) {
+  //     socket.emit('add-new-player', playerData);
+  //   };
+
+  //   openRooms('create-or-join');
+
+  // });
+
   socket.on('join-room', () => {
-    
+
     let rooms = Object.keys(io.sockets.adapter.rooms);
-    rooms.splice(0, io.engine.clientsCount);
     console.log('room list', rooms);
+    rooms.splice(0, io.engine.clientsCount);
     socket.emit('get-room-list', rooms);
 
     gameLog('join-room', 'no payload');
@@ -106,10 +150,21 @@ io.on('connection', (socket) => {
 
     gameLog('has-joined-room', payload);
    
-    socket.join(payload.joinedRoom);
+    // socket.join(payload.room);
 
-    let p1 = new Player();
-    socket.emit('add-new-player', payload.username, p1);
+    let roomData = {
+      roomID: payload.room,
+      userID: socket.id,
+    };
+
+    let playerData = {
+      roomData,
+      username: payload.username,
+      player: new Player(),
+    };
+
+    players.push(playerData);
+    socket.emit('add-new-player', playerData);
 
     openRooms('has-joined-room');
 
@@ -145,7 +200,12 @@ io.on('connection', (socket) => {
 
     payload.player.hand = initialDeal;
     
-    socket.emit('play-hand', payload);
+    socket.emit('add-to-queue', payload);
+    if (payload.create) {
+      socket.emit('play-hand', payload);
+    } else {
+      socket.emit('not-your-turn', payload);
+    };
 
     openRooms('new-munchkin');
 
@@ -167,18 +227,36 @@ io.on('connection', (socket) => {
     gameLog('combat-ended', payload, card);
 
     // pull (n) number of cards from treasure deck where (n) is card.treasures
-    let treasure = new Treasure('consumable', 3, 'power potion')
-    payload.player.hand.push(treasure);
+    // let treasure = new Treasure('consumable', 3, 'power potion')
+    payload.player.hand.push(new Treasure('consumable', 3, 'power potion'));
     console.log(payload.player.hand);
 
-    openRooms('combat-ended')
+    openRooms('combat-ended');
 
-  })
+  });
 
-  openRooms('global')
+  socket.on('turn-over', (payload) => {
+
+    socket.emit('not-your-turn', payload);
+    console.log(players);
+
+    if (players.length > 0) {
+      let nextPlayer = players.shift();
+      players.push(nextPlayer);
+      if (players.length > 1) {
+        socket.to(nextPlayer.roomData.userID).emit('play-hand', nextPlayer);
+      } else {
+        socket.emit('play-hand', payload);
+      };
+    };
+
+  });
+
+  openRooms('global');
 
 });
-  
+
+
 function gameLog(event, payload, other){
   const timestamp = new Date().toTimeString().split(' ')[0];
   console.log('TICK', { timestamp, event, payload, other } );
@@ -186,8 +264,9 @@ function gameLog(event, payload, other){
 
 function openRooms(event){
   let rooms = io.sockets.adapter.rooms
-  // console.log('OPEN ROOMS', {event, rooms});
 }
+  console.log('OPEN ROOMS', {event, rooms});
+
 
 let doorCards = [
   {
@@ -311,6 +390,46 @@ let doorCards = [
     monsterBonus: 6,
   },
 ];
+ 
+
+function openRooms(event){
+  let rooms = io.sockets.adapter.rooms
+  console.log('OPEN ROOMS', {event, rooms});
+}
+
+/* 
+BASIC TURN ORDER
+1. players joins a game
+2. game starts
+3. players roll for turn order
+4. P1 kicks down door
+5. Is it a monster? 
+  i. combat starts
+  ii. if P1 can beat monster:
+    a. P1 level++
+    b. P1 recieves treasure
+    c. P1 can play any applicable cards
+  iii. if P1 can't beat monster
+    a. ask for help (stretch goal)
+    b. roll d6 to run away
+      1. if roll succeeds, P1 turn is over
+      2. if roll fails, P1 loses combat
+      3. resolve any bad stuff
+6. Is it a curse?
+  i. curse effect applies to P1 immediately
+  ii. P1 can look for trouble or loot the room (see below)
+7. Is it neither?
+  i. P1 can look for trouble
+    a. play monster from your hand, standard combat rules apply
+  ii. P1 can loot the room
+    a. face down door card goes into P1s hand
+8. P1 plays any applicable cards i.e. equipment, curses against other players etc
+9. P1 turn is over, P2 turn start
+10. Repeat from step 1
+*/
+
+/** temp card laibrary */
+// let door = doorCards[Math.floor(Math.random() * doorCards.length)]; // get random card
  
 
 function start(port) {
