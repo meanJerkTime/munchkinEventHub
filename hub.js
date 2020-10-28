@@ -1,6 +1,4 @@
 'use strict';
-
-/** 3rd party dependencies */
 require('dotenv').config();
 const io = require('socket.io')(3000); // Connected to whichever server is hosting events
 
@@ -234,6 +232,7 @@ io.on('connect', socket => {
 
 });
 
+
 function gameLog(event, payload, other){
   const timestamp = new Date().toTimeString().split(' ')[0];
   console.log('TICK', { timestamp, event, payload, other } );
@@ -405,6 +404,50 @@ let doorCards = [
 ];
  
 
+function openRooms(event){
+  let rooms = io.sockets.adapter.rooms
+  console.log('OPEN ROOMS', {event, rooms});
+}
 
+/* 
+BASIC TURN ORDER
+1. players joins a game
+2. game starts
+3. players roll for turn order
+4. P1 kicks down door
+5. Is it a monster? 
+  i. combat starts
+  ii. if P1 can beat monster:
+    a. P1 level++
+    b. P1 recieves treasure
+    c. P1 can play any applicable cards
+  iii. if P1 can't beat monster
+    a. ask for help (stretch goal)
+    b. roll d6 to run away
+      1. if roll succeeds, P1 turn is over
+      2. if roll fails, P1 loses combat
+      3. resolve any bad stuff
+6. Is it a curse?
+  i. curse effect applies to P1 immediately
+  ii. P1 can look for trouble or loot the room (see below)
+7. Is it neither?
+  i. P1 can look for trouble
+    a. play monster from your hand, standard combat rules apply
+  ii. P1 can loot the room
+    a. face down door card goes into P1s hand
+8. P1 plays any applicable cards i.e. equipment, curses against other players etc
+9. P1 turn is over, P2 turn start
+10. Repeat from step 1
+*/
 
+/** temp card laibrary */
+// let door = doorCards[Math.floor(Math.random() * doorCards.length)]; // get random card
+ 
 
+function start(port) {
+  http.listen(port, () => console.log('server up on port', port)); 
+}
+
+module.exports = {
+  start:start
+}
