@@ -23,17 +23,6 @@ io.on('connection', (socket) => {
   console.log(socket.id, 'Connected');
 
   players.push(socket.id);
-  
-  if(players.length === 1) {
-    const player1 = socket.id;
-    io.emit('playerOne');
-  }
-  if(players.length === 2) {
-    const player2 = socket.id;
-    console.log(socket.id, 'is playerB')
-    // io.emit('isPlayerB', 'you are player B');
-    io.to(player2).emit('player2');
-  }
 
   socket.on('disconnect', () => {
     console.log('player', socket.id, 'disconnected');
