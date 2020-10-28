@@ -14,6 +14,8 @@ const DoorMisc = require('./lib/card-library/door-misc.js');
 /** Primary game namespace */
 // const gameRoom = io.of('/gameroom'); // not currently in use
 let players = [];
+let playerNum = 1;
+let turn = 0;
 /** Global connection to client that immediatley adds incoming sockets (clients) to their own game room. No namespace implementation is used. Might add namespace implementation in the future.*/
 io.on('connect', socket => {
 
@@ -34,7 +36,7 @@ io.on('connect', socket => {
 
     gameLog('create-room', payload);
     
-    socket.join(payload.room);
+    // socket.join(payload.room); // will be implemented in the future
 
     let player = new Player();
     
@@ -49,6 +51,21 @@ io.on('connect', socket => {
       username: payload.username,
       player, 
     };
+
+    const user = socket.id;
+    if( players.length === 1 ) {
+      io.to(user).emit('player-turn');
+    } else if ( players.length !== 1 ) {
+      io.to(user).emit('player', 'please wait to play your turn', payload);
+    };
+
+    socket.on('next-player', () => {
+      turn++;
+      if ( turn === players.length ) {
+        turn = 0;
+      };
+      io.to(players[turn]).emit('player-turn');
+    });
 
     players.push(playerData);
     // console.log(playerData);
@@ -111,7 +128,7 @@ io.on('connect', socket => {
 
     gameLog('has-joined-room', payload);
    
-    socket.join(payload.room);
+    // socket.join(payload.room);
 
     let roomData = {
       roomID: payload.room,
