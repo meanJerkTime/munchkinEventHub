@@ -21,37 +21,27 @@ let players = [];
 
 
 io.on('connection', (socket) => {
-  console.log(socket.id, 'Connected');
-    socket.emit('login');
-  //    socket.on('fromPlayer', () => {
-  //       console.log(socket.id, 'Connected');
-  //       socket.emit('toPlayer');
-  // });
-
-     players.push(socket.id);
   
-      const player = socket.id;
-    
-      console.log(socket.id, 'is player', playerNum++);
-      if(players.length === 1) {
-          // io.to(player).emit('playerTurn');
-          socket.on('game', () => {
-            io.to(player).emit('playerTurn');
-          })
-
+  socket.on('ready', (payload) => {
+    console.log(payload, 'three');
+    payload.userID = socket.id; 
+    players.push(payload);
+ 
+    // are all players ready?
+    // add conditional so all other players are informed they are waiting. 
+    if(players.length >= 2) {
+        io.to(players[turn].userID).emit('playerTurn', players[turn]);
+        console.log(players[0], 'payload after ellie');
       }
-      else if (players.length !== 1) {
-        io.to(player).emit('player', 'Please wait to play your hand!');
-      }
+    })
 
-    socket.on('nextPlayer', () => {
+     socket.on('nextPlayer', (payload) => {
+       console.log(payload);
         turn++;
         if(turn === players.length) {
             turn = 0;
+            io.to(players[0].userID).emit('playerTurn');
         }
-      console.log(players[turn]);
-      console.log(turn);
-      io.to(players[turn]).emit('playerTurn');
     })  
   
     socket.on('disconnect', () => {
@@ -61,6 +51,7 @@ io.on('connection', (socket) => {
     })
 
     socket.on('signIn', function(user) {
+      console.log('sign in hit');
         // superagent.get('http://localhost:3000/signin')
         superagent.get('https://munchkin-401-server.herokuapp.com/signin')
         .send({username:user.userName, password:user.password})
@@ -72,7 +63,7 @@ io.on('connection', (socket) => {
             console.log('Invalid Login');
           } else {
             console.log(res.body.user, 'signed in');
-            socket.emit('valid');
+            socket.emit('valid', res.body.user);
           }
         });
     
@@ -91,18 +82,19 @@ io.on('connection', (socket) => {
     
       });
 
-    socket.on('hand-has-been-played', payload => {
+      socket.on('hand-has-been-played', payload => {
 
     
         // pull one card from door deck at random
         let card = new Monster(1, 'Weak Monster', 1, 1);
     
         socket.emit('kick-down-door', payload, card);
+        console.log(payload, 'six');
     
       });
 
       socket.on('new-munchkin', (payload) => {
-
+        console.log('test');
     
         // randomly pull 4 door cards and 4 treasure cards and add them to palyer hand
         // if player.dead = true
@@ -127,32 +119,31 @@ io.on('connection', (socket) => {
           t3,
           t4,
         ];
-    
+        let munchkinPlayer = new Player();
+        payload.player = munchkinPlayer;
         payload.player.hand = initialDeal;
         
+        console.log(payload, 'five'); 
+        
         socket.emit('play-hand', payload);
-    
-    
+
       });
 
-      socket.on('create-room', payload => {
+      // socket.on('create-room', payload => {
 
-        console.log(`${payload.username} has connected to room ${payload.room}`);
+      //   console.log(`${payload.name} has connected to room ${payload.room}`);
     
         
-        socket.join(payload.room);
+      //   socket.join(payload.room);
     
-        let p1 = new Player();
+      //   let p1 = new Player();
     
-        socket.emit('add-new-player', payload.username, p1);
+      //   socket.emit('add-new-player', payload.username, p1);
     
     
-      });
-
-      
-
+      // });
     })
- 
+
 
 function start(port) {
   http.listen(port, () => console.log('server up on port', port)); 
