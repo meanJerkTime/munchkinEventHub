@@ -2,16 +2,16 @@
 require('dotenv').config();
 
 const superagent = require('superagent');
-const doorCards = require('./cards.js')
+const doorCards = require('../cards.js')
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const Player = require('./lib/player.js');
-const Monster = require('./lib/card-library/monster.js');
-const Treasure = require('./lib/card-library/treasure.js');
-const Curse = require('./lib/card-library/curse.js');
-const DoorMisc = require('./lib/card-library/door-misc.js');
+const Player = require('../lib/player.js');
+const Monster = require('../lib/card-library/monster.js');
+const Treasure = require('../lib/card-library/treasure.js');
+const Curse = require('../lib/card-library/curse.js');
+const DoorMisc = require('../lib/card-library/door-misc.js');
 
 app.use(express.urlencoded({extended:true}));
 
