@@ -40,13 +40,14 @@ io.on('connection', (socket) => {
         let index = turn % 2;
           io.to(players[index].userID).emit('playerTurn', players[index]);
     })
-    socket.on('disconnect', () => {
-        console.log('player', socket.id, 'disconnected');
-        players = players.filter(player => player !== socket.id);
-        console.log(players);
-    })
+    // socket.on('disconnect', () => {
+    //     console.log('player', socket.id, 'disconnected');
+    //     players = players.filter(player => player !== socket.id);
+    //     console.log(players);
+    // })
 
     socket.on('signIn', function(user) {
+      console.log(user.userName);
       console.log('sign in hit');
         // superagent.get('http://localhost:3000/signin')
         superagent.get('https://munchkin-401-server.herokuapp.com/signin')
