@@ -30,20 +30,16 @@ io.on('connection', (socket) => {
     // are all players ready?
     // add conditional so all other players are informed they are waiting. 
     if(players.length >= 2) {
+      console.log(players, turn );
         io.to(players[turn].userID).emit('playerTurn', players[turn]);
-        console.log(players[0], 'payload after ellie');
       }
     })
-
-     socket.on('nextPlayer', (payload) => {
+   socket.on('nextPlayer', (payload) => {
        console.log(payload);
         turn++;
-        if(turn === players.length) {
-            turn = 0;
-            io.to(players[0].userID).emit('playerTurn');
-        }
-    })  
-  
+        let index = turn % 2;
+          io.to(players[index].userID).emit('playerTurn', players[index]);
+    })
     socket.on('disconnect', () => {
         console.log('player', socket.id, 'disconnected');
         players = players.filter(player => player !== socket.id);
